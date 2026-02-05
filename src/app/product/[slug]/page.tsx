@@ -10,7 +10,7 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-async function getProduct(slug: string) {
+async function getProduct(slug: string): Promise<ProductWithImages | null> {
   const supabase = createServerClient();
 
   const { data: product, error } = await supabase
@@ -24,19 +24,19 @@ async function getProduct(slug: string) {
     )
     .eq("slug", slug)
     .eq("is_active", true)
-    .single();
+    .single() as { data: ProductWithImages | null; error: unknown };
 
   if (error || !product) {
     return null;
   }
 
-  return product as ProductWithImages;
+  return product;
 }
 
 async function getRelatedProducts(
   collectionId: string | null,
   productId: string
-) {
+): Promise<ProductWithImages[]> {
   if (!collectionId) return [];
 
   const supabase = createServerClient();
@@ -53,14 +53,14 @@ async function getRelatedProducts(
     .eq("collection_id", collectionId)
     .eq("is_active", true)
     .neq("id", productId)
-    .limit(4);
+    .limit(4) as { data: ProductWithImages[] | null; error: unknown };
 
   if (error) {
     console.error("Error fetching related products:", error);
     return [];
   }
 
-  return products as ProductWithImages[];
+  return products || [];
 }
 
 export async function generateMetadata({ params }: Props) {

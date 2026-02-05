@@ -3,6 +3,14 @@ import { stripe } from "@/lib/stripe/checkout";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type Stripe from "stripe";
 
+interface Order {
+  id: string;
+}
+
+interface Product {
+  inventory_quantity: number;
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
@@ -77,9 +85,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       shipping_state: session.shipping_details?.address?.state,
       shipping_postal_code: session.shipping_details?.address?.postal_code,
       shipping_country: session.shipping_details?.address?.country,
-    })
+    } as never)
     .select()
-    .single();
+    .single() as { data: Order | null; error: unknown };
 
   if (orderError) {
     console.error("Error creating order:", orderError);
@@ -87,28 +95,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   // Create order items
-  // Note: In a real app, you'd want to map product IDs from metadata
   const itemIds = (session.metadata?.itemIds || "").split(",");
 
   for (let i = 0; i < lineItems.data.length; i++) {
     const lineItem = lineItems.data[i];
     const productId = itemIds[i];
 
-    if (productId) {
+    if (productId && order) {
       await supabase.from("order_items").insert({
         order_id: order.id,
         product_id: productId,
         product_name: lineItem.description || "",
         price: lineItem.amount_total,
         quantity: lineItem.quantity || 1,
-      });
+      } as never);
 
       // Update inventory
       const { data: product } = await supabase
         .from("products")
         .select("inventory_quantity")
         .eq("id", productId)
-        .single();
+        .single() as { data: Product | null };
 
       if (product) {
         await supabase
@@ -118,7 +125,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
               0,
               product.inventory_quantity - (lineItem.quantity || 1)
             ),
-          })
+          } as never)
           .eq("id", productId);
       }
     }

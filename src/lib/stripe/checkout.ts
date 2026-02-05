@@ -1,8 +1,29 @@
 import Stripe from "stripe";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-01-27.acacia",
-});
+// Lazy initialization to avoid build errors when STRIPE_SECRET_KEY is not set
+let stripeInstance: Stripe | null = null;
+
+export function getStripeServer(): Stripe {
+  if (!stripeInstance) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error("STRIPE_SECRET_KEY is not set");
+    }
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-02-24.acacia",
+    });
+  }
+  return stripeInstance;
+}
+
+// For backwards compatibility
+export const stripe = {
+  get checkout() {
+    return getStripeServer().checkout;
+  },
+  get webhooks() {
+    return getStripeServer().webhooks;
+  },
+};
 
 export interface CheckoutItem {
   name: string;

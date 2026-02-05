@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ProductGrid, CollectionFilter } from "@/components/shop";
-import type { ProductWithImages } from "@/types/database";
+import type { ProductWithImages, Collection } from "@/types/database";
 
 export const metadata = {
   title: "Shop | Krysta Mae Ceramics",
@@ -9,7 +9,7 @@ export const metadata = {
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
-async function getProducts() {
+async function getProducts(): Promise<ProductWithImages[]> {
   const supabase = createServerClient();
 
   const { data: products, error } = await supabase
@@ -22,30 +22,30 @@ async function getProducts() {
     `
     )
     .eq("is_active", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }) as { data: ProductWithImages[] | null; error: unknown };
 
   if (error) {
     console.error("Error fetching products:", error);
     return [];
   }
 
-  return products as ProductWithImages[];
+  return products || [];
 }
 
-async function getCollections() {
+async function getCollections(): Promise<Collection[]> {
   const supabase = createServerClient();
 
   const { data: collections, error } = await supabase
     .from("collections")
     .select("*")
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true }) as { data: Collection[] | null; error: unknown };
 
   if (error) {
     console.error("Error fetching collections:", error);
     return [];
   }
 
-  return collections;
+  return collections || [];
 }
 
 export default async function ShopPage() {

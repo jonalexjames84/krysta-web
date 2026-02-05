@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
 import { ProductGrid, CollectionFilter } from "@/components/shop";
-import type { ProductWithImages } from "@/types/database";
+import type { ProductWithImages, Collection } from "@/types/database";
 
 export const revalidate = 60;
 
@@ -9,14 +9,14 @@ interface Props {
   params: Promise<{ collection: string }>;
 }
 
-async function getCollection(slug: string) {
+async function getCollection(slug: string): Promise<Collection | null> {
   const supabase = createServerClient();
 
   const { data: collection, error } = await supabase
     .from("collections")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .single() as { data: Collection | null; error: unknown };
 
   if (error || !collection) {
     return null;
@@ -25,7 +25,7 @@ async function getCollection(slug: string) {
   return collection;
 }
 
-async function getProductsByCollection(collectionId: string) {
+async function getProductsByCollection(collectionId: string): Promise<ProductWithImages[]> {
   const supabase = createServerClient();
 
   const { data: products, error } = await supabase
@@ -39,30 +39,30 @@ async function getProductsByCollection(collectionId: string) {
     )
     .eq("collection_id", collectionId)
     .eq("is_active", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }) as { data: ProductWithImages[] | null; error: unknown };
 
   if (error) {
     console.error("Error fetching products:", error);
     return [];
   }
 
-  return products as ProductWithImages[];
+  return products || [];
 }
 
-async function getCollections() {
+async function getCollections(): Promise<Collection[]> {
   const supabase = createServerClient();
 
   const { data: collections, error } = await supabase
     .from("collections")
     .select("*")
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true }) as { data: Collection[] | null; error: unknown };
 
   if (error) {
     console.error("Error fetching collections:", error);
     return [];
   }
 
-  return collections;
+  return collections || [];
 }
 
 export async function generateMetadata({ params }: Props) {

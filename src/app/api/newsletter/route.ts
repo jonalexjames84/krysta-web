@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+interface Subscriber {
+  id: string;
+  unsubscribed_at: string | null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -29,14 +34,14 @@ export async function POST(request: NextRequest) {
       .from("newsletter_subscribers")
       .select("id, unsubscribed_at")
       .eq("email", email)
-      .single();
+      .single() as { data: Subscriber | null };
 
     if (existing) {
       if (existing.unsubscribed_at) {
         // Re-subscribe
         await supabase
           .from("newsletter_subscribers")
-          .update({ unsubscribed_at: null, subscribed_at: new Date().toISOString() })
+          .update({ unsubscribed_at: null, subscribed_at: new Date().toISOString() } as never)
           .eq("id", existing.id);
 
         return NextResponse.json({ message: "Welcome back!" });
@@ -51,7 +56,7 @@ export async function POST(request: NextRequest) {
     // Create new subscriber
     const { error } = await supabase
       .from("newsletter_subscribers")
-      .insert({ email });
+      .insert({ email } as never);
 
     if (error) {
       console.error("Newsletter subscription error:", error);

@@ -1,9 +1,32 @@
 # Product Requirements Document: Pottery Multi-Site Platform
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** February 4, 2026
 **Author:** Jonathan Martin
 **Reference Site:** krystamae.com
+
+---
+
+## Implementation Status Summary
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Next.js + Tailwind setup | Done | v16.1.6 + v4 |
+| Database schema | Done | Supabase types defined |
+| Home page | Done | Hero, Featured, ArtistIntro |
+| Shop pages | Done | Grid, filters, collection pages |
+| Product pages | Done | Detail view with images |
+| Cart | Done | Context + localStorage + drawer |
+| Checkout | Done | Stripe integration |
+| Gallery | Done | Page exists |
+| About | Done | Page exists |
+| Inquire | Done | Form submits to API |
+| **Gaps to address:** | | |
+| Auth/Admin | Not started | No login or CMS |
+| Product variations | Not started | No size/color options |
+| Inquiry form fields | Partial | Missing date, budget, newsletter |
+| Email notifications | Not started | No transactional email |
+| Multi-tenancy | Not started | Single site only |
 
 ---
 
@@ -68,25 +91,39 @@ Based on krystamae.com analysis, each tenant site requires:
 
 ### 3.2 Navigation Structure
 
+**Currently Implemented (Header.tsx):**
+```
+Header:
+├── Logo "Krysta Mae" (links to home)
+├── Shop (no dropdown - links to /shop)
+├── Gallery
+├── About
+├── Inquire
+├── Cart Icon (with count badge, opens CartDrawer)
+└── Mobile hamburger menu
+```
+
+**To match krystamae.com (enhancement needed):**
 ```
 Header:
 ├── Logo (links to home)
-├── Shop (dropdown)
-│   ├── Collection 1
-│   ├── Collection 2
-│   └── ... (dynamic)
+├── Shop (dropdown with collections)
+│   ├── Coastal Summer
+│   ├── Urban Lights
+│   ├── Deep Water Zen
+│   └── ... (dynamic from DB)
 ├── Gallery
 ├── About
 ├── Inquire
 ├── Cart Icon (with count badge)
-└── Social Links (Instagram, etc.)
-
-Footer:
-├── Newsletter signup
-├── Navigation links
-├── Social links
-└── Copyright
+└── Social Links (Instagram)
 ```
+
+**Footer (implemented):**
+- Newsletter signup form
+- Navigation links
+- Social links
+- Copyright
 
 ---
 
@@ -129,19 +166,22 @@ Footer:
 
 ### 4.3 Custom Inquiries (P0 - Must Have)
 
-Inquiry form fields:
+**Currently Implemented:**
 - Name (required)
 - Email (required)
+- Subject (optional)
 - Message (required, textarea)
+
+**Missing vs. krystamae.com (to add):**
 - Target project date (optional, date picker)
 - Project budget (optional, text or dropdown ranges)
 - Additional details (optional, textarea)
 - Newsletter opt-in checkbox
 
 Form submissions:
-- Email notification to artist
-- Stored in admin dashboard
-- Status tracking: new, responded, converted, closed
+- Email notification to artist (TBD)
+- Stored in database via `/api/inquiries`
+- Status tracking: new → responded → converted → closed
 
 ### 4.4 Content Management (P0 - Must Have)
 
@@ -209,19 +249,19 @@ Form submissions:
 
 ## 5. Technical Architecture
 
-### 5.1 Recommended Stack
+### 5.1 Implemented Stack
 
-| Layer | Technology | Rationale |
-|-------|------------|-----------|
-| **Frontend** | Next.js 14+ (App Router) | SSR/SSG, React ecosystem, Vercel deployment |
-| **Styling** | Tailwind CSS | Rapid UI development, design system friendly |
-| **CMS** | Payload CMS or Sanity | Self-hosted option (Payload) or managed (Sanity) |
-| **Database** | PostgreSQL (Supabase) | Relational data, good for e-commerce |
-| **Auth** | Supabase Auth or NextAuth | Multi-tenant user management |
-| **Payments** | Stripe | Industry standard, good API |
-| **Storage** | Supabase Storage or Cloudflare R2 | Image hosting |
-| **Hosting** | Vercel or Cloudflare Pages | Edge deployment, easy scaling |
-| **Email** | Resend or Postmark | Transactional emails |
+| Layer | Technology | Status |
+|-------|------------|--------|
+| **Frontend** | Next.js 16.1.6 (App Router) | Implemented |
+| **Styling** | Tailwind CSS v4 | Implemented |
+| **Forms** | React Hook Form + Zod | Implemented |
+| **Database** | PostgreSQL (Supabase) | Implemented |
+| **Auth** | TBD | Not yet implemented |
+| **Payments** | Stripe | Implemented |
+| **Storage** | Supabase Storage | Assumed |
+| **Hosting** | TBD | Not yet deployed |
+| **Email** | TBD | Not yet implemented |
 
 ### 5.2 Multi-Tenancy Approach
 
@@ -235,39 +275,50 @@ Form submissions:
 - More isolation, more operational overhead
 - Better for very different customization needs
 
-### 5.3 Data Model (Core Entities)
+### 5.3 Data Model (Implemented)
 
 ```
-Tenant
-├── id, name, slug, domain, settings, created_at
+collections
+├── id, name, slug, description, image_url, sort_order, created_at, updated_at
 
-User
-├── id, tenant_id, email, role (admin|artist|viewer), created_at
+products
+├── id, name, slug, description, price, compare_at_price, inventory_quantity
+├── collection_id (FK), is_featured, is_active, created_at, updated_at
 
-Collection
-├── id, tenant_id, name, slug, description, hero_image, order, created_at
+product_images
+├── id, product_id (FK), url, alt_text, sort_order, created_at
 
-Product
-├── id, tenant_id, name, slug, description, price, images[], status, created_at
+orders
+├── id, order_number, email, status, payment_status
+├── stripe_checkout_session_id, stripe_payment_intent_id
+├── subtotal, shipping_cost, tax, total
+├── shipping_name, shipping_address_line1/2, shipping_city/state/postal_code/country
+├── customer_id (FK), created_at, updated_at
 
-ProductVariation
-├── id, product_id, name (e.g., "Large - Blue"), price_modifier, stock
+order_items
+├── id, order_id (FK), product_id (FK), product_name, price, quantity, created_at
 
-ProductCollection (join table)
-├── product_id, collection_id, order
+customers
+├── id, email, name, stripe_customer_id, created_at, updated_at
 
-GalleryImage
-├── id, tenant_id, url, caption, category, order, created_at
+inquiries
+├── id, name, email, subject, message, status, created_at
 
-Inquiry
-├── id, tenant_id, name, email, message, target_date, budget, status, created_at
+newsletter_subscribers
+├── id, email, subscribed_at, unsubscribed_at
 
-Order
-├── id, tenant_id, customer_email, items[], total, status, stripe_id, created_at
+gallery_images
+├── id, url, alt_text, caption, sort_order, created_at
 
-Page (for custom content)
-├── id, tenant_id, slug, title, content (JSON/blocks), created_at
+site_settings
+├── id, key, value (JSON), updated_at
 ```
+
+**Not Yet Implemented (for multi-tenancy):**
+- Tenant table
+- User/roles table
+- tenant_id foreign keys on all tables
+- ProductVariation table (for size/color options)
 
 ---
 
@@ -329,41 +380,42 @@ Page (for custom content)
 
 ## 7. Implementation Phases
 
-### Phase 1: Foundation (MVP)
-- [ ] Project setup (Next.js, Tailwind, Supabase)
-- [ ] Database schema and migrations
+### Phase 1: Foundation (MVP) — COMPLETE
+- [x] Project setup (Next.js 16, Tailwind v4, Supabase)
+- [x] Database schema and types
 - [ ] Basic authentication (admin login)
-- [ ] Home page template
-- [ ] About page with CMS
-- [ ] Gallery page with image upload
-- [ ] Contact/Inquire form
+- [x] Home page (Hero, FeaturedCollection, ArtistIntro)
+- [x] About page
+- [x] Gallery page
+- [x] Contact/Inquire form
 
-### Phase 2: E-Commerce Core
-- [ ] Product data model and admin CRUD
-- [ ] Collection management
-- [ ] Product listing pages
-- [ ] Product detail pages
-- [ ] Shopping cart (client-side)
-- [ ] Stripe checkout integration
-- [ ] Order confirmation flow
+### Phase 2: E-Commerce Core — MOSTLY COMPLETE
+- [x] Product data model
+- [x] Collection management
+- [x] Product listing pages (`/shop`, `/shop/[collection]`)
+- [x] Product detail pages (`/product/[slug]`)
+- [x] Shopping cart (client-side with localStorage)
+- [x] Stripe checkout integration (`/api/checkout`, `/api/webhooks/stripe`)
+- [x] Order confirmation flow (`/checkout/success`)
+- [ ] Product variations (size, color, glaze)
 
-### Phase 3: Polish & Client Handoff
-- [ ] Client-facing CMS dashboard
-- [ ] Theme customization (colors, fonts)
-- [ ] SEO optimization
+### Phase 3: Polish & Client Handoff — IN PROGRESS
+- [ ] Client-facing CMS dashboard (admin UI)
+- [x] Theme customization (fonts: Cormorant + Inter, colors defined)
+- [ ] SEO optimization (basic metadata done)
 - [ ] Email notifications (order, inquiry)
-- [ ] Newsletter integration
-- [ ] Mobile optimization pass
+- [x] Newsletter API (`/api/newsletter`)
+- [x] Mobile optimization (responsive header, cart drawer)
 - [ ] Performance optimization
 
-### Phase 4: Multi-Tenancy
+### Phase 4: Multi-Tenancy — NOT STARTED
 - [ ] Tenant creation workflow
 - [ ] Domain mapping
 - [ ] Admin super-dashboard
 - [ ] Tenant isolation verification
 - [ ] Backup/restore per tenant
 
-### Phase 5: Migrate Clients
+### Phase 5: Migrate Clients — NOT STARTED
 - [ ] Migrate krystamae.com content
 - [ ] DNS cutover
 - [ ] Client training
@@ -374,12 +426,18 @@ Page (for custom content)
 
 ## 8. Open Questions
 
-1. **Hosting budget?** Vercel Pro ($20/mo) vs. self-hosted vs. Cloudflare (cheaper)?
-2. **CMS preference?** Self-hosted Payload vs. managed Sanity vs. custom admin?
-3. **Domain strategy?** Each client brings own domain, or offer subdomains?
-4. **Shipping complexity?** Flat rate sufficient, or need carrier integration?
-5. **Existing Squarespace data?** Export available? Product count per site?
-6. **Design variations?** One theme with config, or multiple theme templates?
+**Immediate (for Krysta Mae launch):**
+1. **Admin UI approach?** Build custom dashboard vs. use Supabase Studio vs. add headless CMS?
+2. **Email provider?** Resend, Postmark, or Supabase's built-in email?
+3. **Image hosting?** Supabase Storage configured? CDN layer needed?
+4. **Deployment target?** Vercel, Cloudflare Pages, or self-hosted?
+
+**For Multi-Tenancy (later):**
+5. **Hosting budget?** Vercel Pro ($20/mo) vs. self-hosted vs. Cloudflare (cheaper)?
+6. **Domain strategy?** Each client brings own domain, or offer subdomains?
+7. **Shipping complexity?** Flat rate sufficient, or need carrier integration?
+8. **Existing Squarespace data?** Export available? Product count per site?
+9. **Design variations?** One theme with config, or multiple theme templates?
 
 ---
 

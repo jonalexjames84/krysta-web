@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       email,
       subject: subject || null,
       message,
-    });
+    } as never);
 
     if (error) {
       console.error("Inquiry submission error:", error);

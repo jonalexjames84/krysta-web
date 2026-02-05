@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { createServerClient } from "@/lib/supabase/server";
+import type { GalleryImage } from "@/types/database";
 
 export const metadata = {
   title: "Gallery | Krysta Mae Ceramics",
@@ -8,20 +9,20 @@ export const metadata = {
 
 export const revalidate = 60;
 
-async function getGalleryImages() {
+async function getGalleryImages(): Promise<GalleryImage[]> {
   const supabase = createServerClient();
 
   const { data: images, error } = await supabase
     .from("gallery_images")
     .select("*")
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true }) as { data: GalleryImage[] | null; error: unknown };
 
   if (error) {
     console.error("Error fetching gallery images:", error);
     return [];
   }
 
-  return images;
+  return images || [];
 }
 
 export default async function GalleryPage() {
