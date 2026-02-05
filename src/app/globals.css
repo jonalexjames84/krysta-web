@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+:root {
+  /* Earthy Color Palette */
+  --cream: #FAF7F2;
+  --sand: #E8DFD3;
+  --clay: #C4A77D;
+  --earth: #8B7355;
+  --charcoal: #3D3D3D;
+  --sage: #9CAF88;
+
+  /* Semantic colors */
+  --background: var(--cream);
+  --foreground: var(--charcoal);
+  --muted: var(--sand);
+  --accent: var(--clay);
+  --accent-dark: var(--earth);
+  --success: var(--sage);
+}
+
+@theme inline {
+  /* Colors */
+  --color-cream: var(--cream);
+  --color-sand: var(--sand);
+  --color-clay: var(--clay);
+  --color-earth: var(--earth);
+  --color-charcoal: var(--charcoal);
+  --color-sage: var(--sage);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-success: var(--success);
+
+  /* Fonts */
+  --font-serif: var(--font-cormorant);
+  --font-sans: var(--font-inter);
+}
+
+/* Base styles */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif);
+  font-weight: 500;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background-color: var(--clay);
+  color: var(--cream);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 2px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--sand);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--clay);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--earth);
+}
